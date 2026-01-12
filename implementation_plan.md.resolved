@@ -1,0 +1,60 @@
+# Subway Real-time Monitoring System Plan
+
+## Goal Description
+To collect real-time Seoul Subway train location data, store it in Supabase with a user-friendly schema, and utilize this data to monitor operational smoothness through specific analysis projects.
+
+## Proposed Changes
+### Project Structure
+New directory: `subway_monitoring/`
+- `schema.sql`: Database definitions.
+- `collector.py`: Main data fetching script.
+- `analysis_plan.md`: Detailed analysis project descriptions.
+- `requirements.txt`: Dependencies.
+
+### Database Schema (Supabase/Postgres)
+Table: `realtime_subway_positions`
+
+| API Field | New Column Name | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `subwayId` | `line_id` | VARCHAR | 1001:Line 1, etc. |
+| `subwayNm` | `line_name` | VARCHAR | e.g., "1호선" |
+| `statnId` | `station_id` | VARCHAR | |
+| `statnNm` | `station_name` | VARCHAR | |
+| `trainNo` | `train_number` | VARCHAR | Unique train ID |
+| `lastRecptnDt`| `last_received_date`| DATE | YYYYMMDD |
+| `recptnDt` | `last_received_time`| TIMESTAMP | YYYY-MM-DD HH:mm:ss |
+| `updnLine` | `direction_type` | INTEGER | 0:Up, 1:Down |
+| `statnTid` | `destination_station_id`| VARCHAR | |
+| `statnTnm` | `destination_station_name`| VARCHAR | |
+| `trainSttus` | `train_status_code` | INTEGER | 0:Enter, 1:Arrive, 2:Depart |
+| `directAt` | `is_express` | BOOLEAN | 1:Express, 0:No |
+| `lstcarAt` | `is_last_train` | BOOLEAN | 1:Yes, 0:No |
+| (New) | `created_at` | TIMESTAMP | Record insertion time (default now()) |
+
+### Data Analysis Projects
+These projects aim to monitor "smooth operation".
+
+1.  **Train Headway Consistency Monitor**
+    *   **Goal**: Detect irregular intervals between trains.
+    *   **Method**: Calculate time difference between distinct `train_number`s arriving (`train_status_code=1`) at the same `station_id` within the same `direction_type`.
+    *   **Metric**: Variance in headway (minutes). High variance = Bunching/Gapping.
+
+2.  **Station Dwell Time Analysis**
+    *   **Goal**: Identify stations where trains are delayed during boarding/alighting.
+    *   **Method**: Measure time delta between `train_status_code=1` (Arrive) and `train_status_code=2` (Depart) for the same `train_number` at the same `station_id`.
+    *   **Metric**: Average dwell time vs. historical average.
+
+3.  **Real-time Congestion/Bottleneck Heatmap**
+    *   **Goal**: Visualize where trains are currently concentrated.
+    *   **Method**: Count active unique `train_number`s per `line_id` or logical section (between stations) in a 5-minute rolling window.
+    *   **Metric**: Train density per line segment.
+
+## Verification Plan
+
+### Automated Tests
+- Run `collector.py` (dry run or with sample data) to verify API parsing and schema mapping.
+- Check generated SQL against Postgres syntax.
+
+### Manual Verification
+- Execute SQL in Supabase (simulated or User action).
+- Inspect `collector.py` output logs.
